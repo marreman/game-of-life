@@ -126,7 +126,7 @@ evolveGrid grid =
 subscriptions : Model -> Sub Msg
 subscriptions model =
     if model.started then
-        Time.every Time.second Tick
+        Time.every (Time.second / 10) Tick
     else
         Sub.none
 
