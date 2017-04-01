@@ -132,7 +132,7 @@ viewGrid grid =
             [ y "100"
             , width "600"
             , height "600"
-            , viewBox ("0 0 10 10")
+            , viewBox ("0 0 100 100")
             ]
             squares
 
