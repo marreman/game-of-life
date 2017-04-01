@@ -56,8 +56,11 @@ update msg model =
 
         NewWindowSize size ->
             let
-                rows = size.height // 10
-                cols = size.width // 10
+                rows =
+                    size.height // 20
+
+                cols =
+                    size.width // 20
             in
                 { model | grid = Matrix.matrix rows cols (\_ -> False) } ! []
 
@@ -131,8 +134,29 @@ subscriptions model =
 getWindowSize =
     Task.perform NewWindowSize Window.size
 
+
 view : Model -> Html Msg
 view model =
+    Html.div []
+        [ viewBoard model
+        , viewControls model
+        ]
+
+
+viewControls : Model -> Html Msg
+viewControls model =
+    Html.div [ class "controls" ]
+        [ Html.button [ onClick StartStop ]
+            [ if model.started then
+                text "Pause"
+              else
+                text "Start"
+            ]
+        ]
+
+
+viewBoard : Model -> Html Msg
+viewBoard model =
     let
         cells =
             model.grid
