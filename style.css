@@ -1,0 +1,39 @@
+html, body {
+  margin: 0;
+  padding: 0;
+  font-family: sans-serif;
+}
+
+body {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background-color: grey;
+}
+
+.board {
+  display: flex;
+  flex-wrap: wrap;
+  width: 700px;
+  height: 700px;
+  background-color: white;
+}
+
+.cell {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 1%;
+  height: 1%;
+  background-color: white;
+  transition: background-color .1s;
+  border-radius: 100%;
+}
+
+.cell.is-alive {
+  background-color: lightblue
+}
+
+button {
+  font-size: 30px;
+}
