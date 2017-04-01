@@ -5,11 +5,13 @@ import Html.Attributes exposing (..)
 import Html.Events exposing (onClick)
 import Matrix exposing (Matrix, Location)
 import Time exposing (Time)
+import Window
+import Task
 
 
 main =
     Html.program
-        { init = ( model, Cmd.none )
+        { init = ( model, getWindowSize )
         , subscriptions = subscriptions
         , update = update
         , view = view
@@ -29,7 +31,7 @@ type alias Position =
 model : Model
 model =
     { started = False
-    , grid = Matrix.square 100 (\_ -> False)
+    , grid = Matrix.square 0 (\_ -> False)
     }
 
 
@@ -37,6 +39,7 @@ type Msg
     = StartStop
     | Flip Location
     | Tick Time
+    | NewWindowSize Window.Size
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -50,6 +53,13 @@ update msg model =
 
         Tick _ ->
             { model | grid = evolveGrid model.grid } ! []
+
+        NewWindowSize size ->
+            let
+                rows = size.height // 10
+                cols = size.width // 10
+            in
+                { model | grid = Matrix.matrix rows cols (\_ -> False) } ! []
 
 
 evolveGrid : Matrix Bool -> Matrix Bool
@@ -118,25 +128,11 @@ subscriptions model =
         Sub.none
 
 
+getWindowSize =
+    Task.perform NewWindowSize Window.size
+
 view : Model -> Html Msg
 view model =
-    div []
-        [ viewControls model
-        , viewBoard model
-        ]
-
-
-viewControls : Model -> Html Msg
-viewControls model =
-    button [ onClick StartStop ] <|
-        if model.started then
-            [ text "Pause" ]
-        else
-            [ text "Start" ]
-
-
-viewBoard : Model -> Html Msg
-viewBoard model =
     let
         cells =
             model.grid
