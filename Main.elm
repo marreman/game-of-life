@@ -148,9 +148,9 @@ viewControls model =
     Html.div [ class "controls" ]
         [ Html.button [ onClick StartStop ]
             [ if model.started then
-                text "Pause"
+                text "■"
               else
-                text "Start"
+                text "▶"
             ]
         ]
 
