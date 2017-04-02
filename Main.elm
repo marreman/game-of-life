@@ -1,16 +1,17 @@
 module Main exposing (..)
 
-import Html exposing (Html)
-import Svg exposing (..)
-import Svg.Attributes exposing (..)
-import Svg.Events exposing (..)
+import Html exposing (..)
+import Html.Attributes exposing (..)
+import Html.Events exposing (onClick)
 import Matrix exposing (Matrix, Location)
 import Time exposing (Time)
+import Window
+import Task
 
 
 main =
     Html.program
-        { init = ( model, Cmd.none )
+        { init = ( model, getWindowSize )
         , subscriptions = subscriptions
         , update = update
         , view = view
@@ -30,7 +31,7 @@ type alias Position =
 model : Model
 model =
     { started = False
-    , grid = Matrix.square 100 (\_ -> False)
+    , grid = Matrix.square 0 (\_ -> False)
     }
 
 
@@ -38,6 +39,7 @@ type Msg
     = StartStop
     | Flip Location
     | Tick Time
+    | NewWindowSize Window.Size
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -52,26 +54,38 @@ update msg model =
         Tick _ ->
             { model | grid = evolveGrid model.grid } ! []
 
+        NewWindowSize size ->
+            let
+                rows =
+                    size.height // 20
+
+                cols =
+                    size.width // 20
+            in
+                { model | grid = Matrix.matrix rows cols (\_ -> False) } ! []
+
 
 evolveGrid : Matrix Bool -> Matrix Bool
 evolveGrid grid =
     let
         evolve : Location -> Bool -> Bool
-        evolve location _ =
+        evolve location isAlive =
             getNeighbours location
                 |> List.map (\loc -> Matrix.get loc grid)
                 |> List.map evaluateCell
                 |> List.sum
-                |> evaluateResult
+                |> evaluateResult isAlive
 
         getNeighbours : Location -> List Location
         getNeighbours ( x, y ) =
-            [ Matrix.loc (x + 1) (y + 0)
-            , Matrix.loc (x + 1) (y + 1)
-            , Matrix.loc (x + 0) (y + 1)
+            [ Matrix.loc (x - 1) (y - 1)
+            , Matrix.loc (x - 1) (y)
             , Matrix.loc (x - 1) (y + 1)
-            , Matrix.loc (x - 1) (y + 0)
-            , Matrix.loc (x - 1) (y - 1)
+            , Matrix.loc (x) (y + 1)
+            , Matrix.loc (x + 1) (y + 1)
+            , Matrix.loc (x + 1) (y)
+            , Matrix.loc (x + 1) (y - 1)
+            , Matrix.loc (x) (y - 1)
             ]
 
         evaluateCell : Maybe Bool -> Int
@@ -86,14 +100,25 @@ evolveGrid grid =
                     )
                 |> Maybe.withDefault 0
 
-        evaluateResult : Int -> Bool
-        evaluateResult numberOfNeighbours =
-            case numberOfNeighbours of
-                3 ->
-                    True
+        evaluateResult : Bool -> Int -> Bool
+        evaluateResult isAlive neighbours =
+            if isAlive then
+                case neighbours of
+                    2 ->
+                        True
 
-                _ ->
-                    False
+                    3 ->
+                        True
+
+                    _ ->
+                        False
+            else
+                case neighbours of
+                    3 ->
+                        True
+
+                    _ ->
+                        False
     in
         Matrix.mapWithLocation evolve grid
 
@@ -101,56 +126,53 @@ evolveGrid grid =
 subscriptions : Model -> Sub Msg
 subscriptions model =
     if model.started then
-        Time.every Time.second Tick
+        Time.every (Time.second / 10) Tick
     else
         Sub.none
 
 
-view : Model -> Svg Msg
+getWindowSize =
+    Task.perform NewWindowSize Window.size
+
+
+view : Model -> Html Msg
 view model =
     Html.div []
-        [ viewControls
-        , viewGrid model.grid
+        [ viewBoard model
+        , viewControls model
         ]
 
 
-viewControls : Html Msg
-viewControls =
-    Html.div []
-        [ Html.button [ onClick StartStop ] [ Html.text "play" ] ]
+viewControls : Model -> Html Msg
+viewControls model =
+    Html.div [ class "controls" ]
+        [ Html.button [ onClick StartStop ]
+            [ if model.started then
+                text "■"
+              else
+                text "▶"
+            ]
+        ]
 
 
-viewGrid : Matrix Bool -> Svg Msg
-viewGrid grid =
+viewBoard : Model -> Html Msg
+viewBoard model =
     let
-        squares =
-            grid
-                |> Matrix.mapWithLocation square
+        cells =
+            model.grid
+                |> Matrix.mapWithLocation viewCell
                 |> Matrix.flatten
     in
-        svg
-            [ y "100"
-            , width "600"
-            , height "600"
-            , viewBox ("0 0 100 100")
+        Html.div [ class "board" ] cells
+
+
+viewCell : Location -> Bool -> Html Msg
+viewCell location isAlive =
+    div
+        [ onClick (Flip location)
+        , classList
+            [ ( "cell", True )
+            , ( "is-alive", isAlive )
             ]
-            squares
-
-
-square : Location -> Bool -> Svg Msg
-square location isAlive =
-    rect
-        [ onClick <| Flip location
-        , x (toString <| Matrix.col location)
-        , y (toString <| Matrix.row location)
-        , width "1"
-        , height "1"
-        , strokeWidth "0.01"
-        , stroke "black"
-        , fill <|
-            if isAlive then
-                "black"
-            else
-                "white"
         ]
-        [ text (toString location) ]
+        []
